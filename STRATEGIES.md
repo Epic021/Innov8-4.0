@@ -5,7 +5,7 @@ Every number below was measured in-session on the real files. Harnesses:
 - **CV** = 5-fold cross-validation on the Archive (`train.csv`, 20k rows, 1,000 top-5% hires): P@5% / NDCG@5%. Steadier than dev.
 - "raw" = the old-regime model with pedigree; "de-biased" = the quality score actually applied to the Vault (expected to score lower on dev, because the Ledger's winners were picked by the old, biased panel).
 
-Shipped: **Track A** (`code/main.py`). Final dev: raw 0.627 / 0.678 / 0.490 / rho 0.43; de-biased blend 0.480 / 0.521 / 0.287 / rho 0.36; CV 0.335 / 0.376.
+Shipped: **Track A** (`code/main.py`). Final dev (after the aptitude/rating parser fixes of section 7.2): raw 0.620 / 0.673 / 0.484 / rho 0.44; de-biased blend 0.460 / 0.513 / 0.283 / rho 0.36; Archive CV P@5% 0.344 (0.329 before the fixes).
 
 ## 1. Rules layer (no ground truth on the Vault — validated indirectly)
 
@@ -34,7 +34,8 @@ Shipped: **Track A** (`code/main.py`). Final dev: raw 0.627 / 0.678 / 0.490 / rh
 | + title-fit feature | 0.573 | 0.620 | 0.417 | 0.29 |
 | + target clipped at 50, 7 leaves / 1500 rounds, assessment z-scored within role | 0.607 | 0.662 | 0.470 | 0.43 |
 | + clip 60 | 0.633 | 0.682 | 0.493 | 0.44 |
-| **+ 5 seeds, institute aliases (shipped)** | **0.627** | **0.678** | **0.490** | **0.43** |
+| + 5 seeds, institute aliases (first upload) | 0.627 | 0.678 | 0.490 | 0.43 |
+| **+ aptitude `%` scale fix and word-rating mapping (final upload; Archive CV 0.329 -> 0.344)** | **0.620** | **0.673** | **0.484** | **0.44** |
 
 ## 3. Model candidates tested (2-seed; CV P@5% / NDCG; dev raw P@150 / NDCG / rho)
 

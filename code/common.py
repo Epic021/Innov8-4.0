@@ -91,6 +91,34 @@ def parse_tech(s):
     return v * 100.0 if v <= 1.0 else v
 
 
+def parse_apt(s):
+    """aptitude_score (out of 10): '5.6', '5.7/10', and recruiter-typed percentages / 0-100 values
+    ('86%', '83') which are divided by 10. ~5% of rows carry the percentage form."""
+    if pd.isna(s):
+        return np.nan
+    t = str(s).lower().strip()
+    v = num(t)
+    if np.isnan(v):
+        return np.nan
+    return v / 10.0 if ("%" in t or v > 10) else v
+
+
+RATING_WORDS = {"outstanding": 5.0, "exceeds expectations": 4.0, "meets expectations": 3.0,
+                "needs improvement": 2.0, "unsatisfactory": 1.0}
+
+
+def parse_rating(s):
+    """last_rating (1-5): '4/5', '3.0', and the six word forms ('Outstanding' ... 'Unsatisfactory'
+    -> 5 ... 1; 'New joiner - not rated' -> missing). ~16% of rows use the word form."""
+    if pd.isna(s):
+        return np.nan
+    t = str(s).lower().strip()
+    for word, val in RATING_WORDS.items():
+        if word in t:
+            return val
+    return num(t)
+
+
 def parse_exp_years(s):
     """total_experience: '9.4 years', '15.9 yrs', '8.3', '20+ years', '9 months', '197 months', 'Fresher'."""
     if pd.isna(s):
@@ -267,8 +295,8 @@ def parse(df):
     """Adds cleaned numeric columns (prefix c_) to a copy of the raw frame."""
     d = df.copy()
     d["c_tech"] = d.technical_assessment.map(parse_tech)
-    d["c_apt"] = d.aptitude_score.map(num)
-    d["c_rating"] = d.last_rating.map(num)
+    d["c_apt"] = d.aptitude_score.map(parse_apt)
+    d["c_rating"] = d.last_rating.map(parse_rating)
     d["c_kpi"] = yesno(d.kpi_met)
     d["c_exp"] = d.total_experience.map(parse_exp_years)
     d["c_age"] = d.age.map(num)
