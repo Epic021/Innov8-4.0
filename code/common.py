@@ -209,6 +209,9 @@ def canon_inst(s):
                  ("indian institute of science", "iisc"),
                  ("formerly dce", "")):
         t = t.replace(a, b)
+    # spelling variants of institutes that ARE in the Archive (would otherwise count as "new colleges")
+    t = re.sub(r"\bnit surathkal\b", "nit karnataka surathkal", t)
+    t = re.sub(r"\bch charan singh\b", "chaudhary charan singh", t)
     return re.sub(r"\s+", " ", t).strip()
 
 

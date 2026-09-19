@@ -42,7 +42,7 @@ LGB_PARAMS = dict(objective="regression", learning_rate=0.03, num_leaves=7, min_
                   feature_fraction=0.8, bagging_fraction=0.8, bagging_freq=1, lambda_l2=1.0,
                   num_threads=C.NUM_THREADS, deterministic=True, force_row_wise=True, verbose=-1)
 N_ROUNDS = 1500
-SEEDS = (42, 43, 44)
+SEEDS = (42, 43, 44, 45, 46)
 # Only the top of the distribution matters: scores below 60 (about the Archive's 70th percentile) are clipped to 60
 # so the models spend no capacity separating bad hires from mediocre ones (Ledger NDCG 0.63 -> 0.68, rho 0.29 -> 0.43;
 # 5-fold CV on the Archive agrees). Chosen by the Ledger and Archive CV over 40/45/50/55/60.
