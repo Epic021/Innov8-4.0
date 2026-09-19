@@ -90,3 +90,83 @@ Merge rule agreed before the results: >80% overlap between the leading tracks ->
 | Rows with blank age in the 500 (two fake rules cannot fire) | 15, all internally consistent; blank-age rate identical across train / dev winners / test |
 | Fuzzy institute variants counted as "new colleges" | only NIT Surathkal and CCS University (fixed by alias); about 6 rows, no membership change |
 | Clean-folder reproduction (`python code/main.py` with only the 4 CSVs) | byte-identical `submission.csv`, 20 s (limit 300 s) |
+
+## 7. Additional analysis (second exploration pass)
+
+Sections 1–6 above are taken as ground truth. The items below were measured
+separately on the same real files (train-only training; dev scored once). They are
+mostly *diagnostic* — the headline is that **the model is at the noise ceiling**, so
+the remaining edge is in cleaning correctness and the deterministic rule layer, not
+in the quality model.
+
+### 7.1 The noise ceiling — why every model candidate clusters at CV ≈ 0.33
+
+`post_hire_score = f(features) + Gaussian noise`: on train the linear residual is
+near-perfectly Gaussian (skew −0.15, kurtosis 0.16) and **homoscedastic** (std ≈17.5
+flat across all fitted deciles) — the signature of an additive-noise generator.
+Decomposition: total std 20.3, **noise std 15.5, signal std 13.1 → signal-to-noise
+variance ratio 0.71 (noise dominates).**
+
+Ranking train by an out-of-fold GBM against the *true* top-5% gives **P@5% = 0.323**;
+a Monte-Carlo (rank by perfect signal vs a noisy realisation) gives **0.314 ± 0.014**.
+That is the achievable ceiling. Section 3's model search (CatBoost, LambdaRank,
+blends, Huber/rank-Gauss targets, monotone constraints, TF-IDF, career velocity) all
+land at **CV P@5% 0.326–0.343** — i.e. the whole search sits *on the ceiling*. The
+model is saturated; further model tuning is inside the noise. The high dev *raw*
+number (0.63) is an old-regime artefact: the Ledger's winners were pedigree-selected,
+so a pedigree-heavy model matches them; the Vault is de-biased, so expect Vault
+precision far below 0.63, nearer the 0.3–0.45 band.
+
+### 7.2 Cleaning fix the base is still missing: `aptitude_score` scale
+
+`aptitude_score` is on 0–10 but recruiters also typed it as a percentage (`"83%"`)
+or bare 0–100; the current `num()` parser leaves those as `83` instead of `8.3`.
+This mis-scales **463 test rows + 943 train rows, and 7 of the 150 dev winners** — a
+spurious 50–100 outlier fed straight to the model (same class of bug as the
+`technical_assessment` 0–1 scale, but not yet fixed). A `parse_apt()` that divides
+the `%`/0–100 values by 10 lifts the de-biased Track A neutralised P@150 0.453→0.467
+and the blend 0.480→0.487, still 0 winners excluded. **Recommend shipping this fix.**
+
+### 7.3 Two columns never fed to any model: `major`, `company_type`
+
+Both are unused. They are job-relevant and **not** in the debrief's pet-preference
+list, so they can be added as ordinary (non-neutralised) one-hots. `company_type`
+carries a small real signal (Early-Stage/Funded Startup +2–3 pts vs Pvt Ltd); `major`
+is near-flat. Adding them + expected-CTC level moved the numbers in 7.2.
+
+### 7.4 Bias audit of the old panel (merit-controlled)
+
+For each pet preference: raw gap ≈ merit-controlled OLS premium ≈ merit-matched gap,
+so the premium is **bias, not ability**: big-name +5.7, metro **+7.2** (grows after
+controlling for merit), gap-free +4.4, IIT +5.2, referral +4.3, employer +4.6,
+degree +3.1, old-boys +6.2. Each marker is 1.3–1.6× over-represented in the old
+top-5% vs the pool. Pedigree carries **14.1%** of the Ridge coefficient mass — the
+share de-biasing removes.
+
+### 7.5 Distribution shift, train vs dev vs test
+
+KS < 0.05 and PSI < 0.02 for every numeric feature; **adversarial validation** AUC:
+train~dev **0.508** (identical — a valid held-out old-regime sample), train-vs-test
+**0.629**, dev-vs-test 0.607. The test shift is driven **only** by the debrief columns
+(pcc present 0→55%, notice>60 0→2.1%, inflated titles 0→1.1%, unseen institutes
+0→3.8%, fabrications 2.7→3.8%); the continuous candidate signal is stable, so the
+train→test transfer is sound and the shift is exactly the new-cycle rules.
+
+### 7.6 Anomaly isolation (diagnostic, not shipped)
+
+Layered: L1 logical-impossibility (the 4 shipped rules; 0 winners, 92.5% recall on
+injected synthetic fakes) + L2 statistical isolation (IsolationForest + LOF + ECOD)
+on **consistency residuals** — outliers in *relationship* space, not magnitude, so
+genuine excellence isn't flagged. A blanket L2 cut clips real winners (4/150), so L2
+belongs as a graded risk **discount**, never a hard delete. L2 surfaced the aptitude
+bug (7.2) and one duplicate the exact-key dedup missed (CH-2TJNBK ≡ CH-Y53B1D).
+
+### 7.7 De-biased ensemble + the λ knob
+
+A 5-model de-biased ensemble (2× LGB regression + LambdaMART + grid-searched HistGBM
++ ExtraTrees, params chosen by 3-fold CV **on train**) on the 7.2/7.3 features gives
+de-biased dev **0.507 / 0.541 / 0.300** — above A (0.480), B (0.480), C (0.400).
+A raw↔de-biased interpolation knob shows dev sliding **0.62→0.49** as pedigree is
+removed (λ 0→1): that slide *is* the bias premium. Since re-uploads are free, ship
+λ=1 (principled per the debrief) and A/B a λ=0.5 hedge on the live leaderboard —
+the only way to learn whether the Vault rewards any residual pedigree.
