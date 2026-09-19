@@ -10,3 +10,8 @@ documentation.html
 submission_b.csv
 submission_c.csv
 submission_d.csv
+
+# session additions
+corporate_heist_data/
+.venv/
+.DS_Store

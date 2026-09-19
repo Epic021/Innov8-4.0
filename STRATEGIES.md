@@ -170,3 +170,22 @@ A raw↔de-biased interpolation knob shows dev sliding **0.62→0.49** as pedigr
 removed (λ 0→1): that slide *is* the bias premium. Since re-uploads are free, ship
 λ=1 (principled per the debrief) and A/B a λ=0.5 hedge on the live leaderboard —
 the only way to learn whether the Vault rewards any residual pedigree.
+## 8. Backtracking to source (cross-cycle identity) — tested, empty
+
+Idea: recover a Vault candidate's known outcome by matching them back to their record in the
+Archive/Ledger via the identity keys (`code/common.py`: name / phone / email), i.e. if the same
+person recurs across cycles we already know their `post_hire_score` or winner status. Measured
+with `code/eval_harness.py --probe` over all 10,000 Vault rows:
+
+| Match test → train / dev | Shared |
+|---|---|
+| phone (last-10 digits) | **0 / 0** |
+| email (normalised local part) | **0 / 0** |
+| name + graduation-year + institute | **0** |
+| name only | 473 — but 0 of them share a phone, email, or institute |
+
+Verdict: **the three files are disjoint populations by design** — there is no source outcome to
+backtrack to. The 473 shared bare names are common-name collisions, not recurring people. This is
+consistent with the debrief ("the Vault is a new cycle"). Not usable; kept here so the idea is not
+re-tried. (`code/eval_harness.py` also holds the leak-free base-model harness: Archive 5-fold CV +
+Ledger raw-pedigree P@150, the two proxies any base-model change must improve together.)
