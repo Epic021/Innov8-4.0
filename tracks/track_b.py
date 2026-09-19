@@ -68,11 +68,16 @@ def relevance(y):
     return r
 
 
-def fit_ranker(X, rel, cols):
-    """3-seed LambdaMART; one query group = the whole Archive. Returns predict(frame)."""
+def fit_ranker(X, rel, cols, group_size=1000):
+    """3-seed LambdaMART. LightGBM caps a query group at 10,000 rows, so the Archive is split into
+    fixed random groups of `group_size` (a fixed permutation keeps it deterministic). Returns predict(frame)."""
+    perm = np.random.RandomState(SEEDS[0]).permutation(len(X))
+    Xs, rs = X[cols].iloc[perm], np.asarray(rel)[perm]
+    n = len(X)
+    groups = [group_size] * (n // group_size) + ([n % group_size] if n % group_size else [])
     models = []
     for s in SEEDS:
-        dset = lgb.Dataset(X[cols], label=rel, group=[len(X)])
+        dset = lgb.Dataset(Xs, label=rs, group=groups)
         params = dict(LGB_BASE, objective="lambdarank", metric="ndcg", ndcg_eval_at=[C.K_DEV], seed=s)
         models.append(lgb.train(params, dset, num_boost_round=N_ROUNDS))
     return lambda F: np.mean([m.predict(F[cols]) for m in models], axis=0)

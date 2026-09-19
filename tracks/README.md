@@ -36,3 +36,17 @@ composition, then writes its 500-row submission. Both are deterministic (fixed
 seeds 42/43/44, 2 threads) and reuse `code/common.py` and `code/nirf_2025_engineering_top50.csv`.
 
 Dependencies are the same as Track A: pandas, numpy, scikit-learn, LightGBM.
+
+## Results (run 19 Sep, dev harness = Ledger, de-biased quality; random = 0.05)
+
+| Track | P@150 | NDCG@150 | MAP@150 | overlap with A's 500 | runtime |
+|---|---|---|---|---|---|
+| A (shipped) | 0.480 | 0.521 | 0.287 | — | 20 s |
+| B | 0.480 | 0.526 | 0.300 | 430 / 500 (A's top 100 all included) | 31 s |
+| C | 0.400 | 0.453 | 0.221 | 344 / 500 | 29 s |
+
+Components: B's ranker alone 0.453, P(top-5%) 0.447, P(top-15%) 0.447; C's scorecard alone 0.280, its model
+block alone 0.447. A and B are tied; by the pre-agreed rule (>80% overlap -> ship the simpler one) Track A is the
+submission. Notes: LightGBM caps a query group at 10,000 rows, so B's ranker uses fixed random groups of 1,000;
+`to_score_scale` maps quality onto the clipped target distribution, which makes B/C's quantile-gap bonuses larger
+in points (21.9) than A's (7.9) -- the rank semantics are the same but the two are not point-for-point identical.
