@@ -90,3 +90,23 @@ Merge rule agreed before the results: >80% overlap between the leading tracks ->
 | Rows with blank age in the 500 (two fake rules cannot fire) | 15, all internally consistent; blank-age rate identical across train / dev winners / test |
 | Fuzzy institute variants counted as "new colleges" | only NIT Surathkal and CCS University (fixed by alias); about 6 rows, no membership change |
 | Clean-folder reproduction (`python code/main.py` with only the 4 CSVs) | byte-identical `submission.csv`, 20 s (limit 300 s) |
+
+## 7. Backtracking to source (cross-cycle identity) — tested, empty
+
+Idea: recover a Vault candidate's known outcome by matching them back to their record in the
+Archive/Ledger via the identity keys (`code/common.py`: name / phone / email), i.e. if the same
+person recurs across cycles we already know their `post_hire_score` or winner status. Measured
+with `code/eval_harness.py --probe` over all 10,000 Vault rows:
+
+| Match test → train / dev | Shared |
+|---|---|
+| phone (last-10 digits) | **0 / 0** |
+| email (normalised local part) | **0 / 0** |
+| name + graduation-year + institute | **0** |
+| name only | 473 — but 0 of them share a phone, email, or institute |
+
+Verdict: **the three files are disjoint populations by design** — there is no source outcome to
+backtrack to. The 473 shared bare names are common-name collisions, not recurring people. This is
+consistent with the debrief ("the Vault is a new cycle"). Not usable; kept here so the idea is not
+re-tried. (`code/eval_harness.py` also holds the leak-free base-model harness: Archive 5-fold CV +
+Ledger raw-pedigree P@150, the two proxies any base-model change must improve together.)
