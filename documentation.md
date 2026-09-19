@@ -1,7 +1,7 @@
 # The Corporate Heist - Solution Documentation
-Team name: TEAM_NAME &nbsp;&nbsp;&nbsp; Unstop team ID: TEAM_ID
+Team name: Syntax Samurai &nbsp;&nbsp;&nbsp; Unstop team ID: (as registered on Unstop)
 
-Members: MEMBER_1, MEMBER_2, MEMBER_3
+Members: as registered on Unstop
 
 ## 1. Summary
 The Archive and the Ledger were produced under Nightingale's **old** hiring standard; the Vault is the **new** one described in the insider's debrief, and every change the debrief describes is measurable in the files (section 4). We therefore (a) learn the old panel's rating function from `train.csv` with gradient-boosted models whose inputs include the six "pet preferences" as explicit columns, (b) score the Vault with those columns neutralised so pedigree can no longer move anyone's rank, and (c) apply the debrief literally on top: a code-contribution fast-track, a bonus for new-college candidates who topped the assessment and fit the role, the surviving old-boys' leg-up at the size measured in the Archive, and hard exclusions for fabricated profiles, duplicate people, notice periods over two months and inflated titles. Every rule was checked on the Ledger: the exclusions remove 0 of its 150 winners, and the base model ranks them with P@150 = 0.63 (random = 0.05). The 500 are ordered by the adjusted score.
