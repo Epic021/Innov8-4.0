@@ -35,7 +35,7 @@ DEFAULTS = dict(
     pcc_q=0.65,          # full bonus lifts a 65th-percentile ("only good") profile to the top-5% line
     star_tech=85,        # "topped the technical assessment"
     star_q=0.50,         # star bonus lifts a median profile to the top-5% line
-    star_role_fit=True,  # "genuinely fit the role": role-fit at or above the Vault median
+    star_role_fit=True,  # "genuinely fit the role": skill role-fit >= Vault median, or title in the role family
     old_boys_bonus=None, # None = the premium measured in the Archive (Ridge coefficient)
 )
 LGB_PARAMS = dict(objective="regression", learning_rate=0.03, num_leaves=15, min_data_in_leaf=80,
@@ -110,8 +110,8 @@ def shortlist(prep, **kw):
     b_pcc = ramp * pcc_bonus
 
     star = prep["unseen"] & (te.c_tech >= P["star_tech"])
-    if P["star_role_fit"]:
-        star &= X.role_fit >= X.role_fit.median()
+    if P["star_role_fit"]:   # "genuinely fit the role": skills overlap the role's, or the current title is in the role family
+        star &= (X.role_fit >= X.role_fit.median()) | (X.title_fit > 0)
     star_bonus = top5_line - q(P["star_q"])
     b_new = star.astype(float) * star_bonus
 

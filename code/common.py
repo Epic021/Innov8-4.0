@@ -33,6 +33,26 @@ METRO_CITIES = {
 # (residual +4.0..+4.6 vs +3.0 for a generic IIT) -- the "old-boys' network" handful.
 OLD_BOYS = {"dtu", "nit warangal", "iit kharagpur", "bits pilani", "iisc", "nsut"}
 
+# Does the candidate's current title belong to the role family they applied for?
+ROLE_TITLE_KW = {
+    "DevOps / SRE": r"devops|sre|site reliability|platform",
+    "Product Analyst": r"product analyst|analyst",
+    "Backend Engineer": r"backend|back end|api",
+    "ML Engineer": r"\bml\b|machine learning|\bai\b",
+    "Data Scientist": r"data scien",
+    "Data Engineer": r"data engineer",
+    "Full Stack Engineer": r"full stack|fullstack",
+    "QA Automation Engineer": r"\bqa\b|test|sdet|quality",
+    "Frontend Engineer": r"frontend|front end|\bui\b",
+    "Mobile Engineer": r"mobile|android|ios|flutter",
+}
+
+
+def title_fits_role(role, title):
+    pat = ROLE_TITLE_KW.get(str(role))
+    return bool(pat and re.search(pat, str(title).lower()))
+
+
 SKILL_ALIASES = {
     "python 3": "python", "python3": "python", "py": "python",
     "t-sql": "sql", "structured query language": "sql", "mysql": "sql", "postgresql": "sql", "postgres": "sql",
@@ -364,6 +384,8 @@ class FeatureBuilder:
         cols["role_fit"] = pd.Series([
             (len(set(sk) & self.role_skills.get(r, set())) / max(len(sk), 1)) if isinstance(sk, list) else 0.0
             for sk, r in zip(d.c_skills, d.applied_role)], index=d.index)
+        cols["title_fit"] = pd.Series([float(title_fits_role(r, t)) for r, t in zip(d.applied_role, d.current_title)],
+                                      index=d.index)
         # --- pedigree block: the six things the old panel inflated (+ IIT/NIT splits of "big name") ---
         inst = d.c_inst
         iit = inst.str.startswith("iit ")
