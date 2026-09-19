@@ -38,11 +38,14 @@ DEFAULTS = dict(
     star_role_fit=True,  # "genuinely fit the role": skill role-fit >= Vault median, or title in the role family
     old_boys_bonus=None, # None = the premium measured in the Archive (Ridge coefficient)
 )
-LGB_PARAMS = dict(objective="regression", learning_rate=0.03, num_leaves=15, min_data_in_leaf=80,
+LGB_PARAMS = dict(objective="regression", learning_rate=0.03, num_leaves=7, min_data_in_leaf=150,
                   feature_fraction=0.8, bagging_fraction=0.8, bagging_freq=1, lambda_l2=1.0,
                   num_threads=C.NUM_THREADS, deterministic=True, force_row_wise=True, verbose=-1)
-N_ROUNDS = 900
+N_ROUNDS = 1500
 SEEDS = (42, 43, 44)
+# Only the top of the distribution matters: scores below the Archive median (49) are clipped to 50 so the
+# models spend no capacity separating bad hires from mediocre ones (Ledger NDCG 0.63 -> 0.65, rho 0.29 -> 0.42).
+TARGET_CLIP = 50.0
 REMOVED = C.PEDIGREE + ["old_boys"]     # every institute/pedigree column is taken out of the models
 
 
@@ -72,13 +75,14 @@ def prepare(data_dir="."):
     coef = pd.Series(ridge.coef_, index=Xtr.columns)
     log("old panel premium (pts): " + ", ".join("%s=%.1f" % (c, coef[c]) for c in REMOVED))
 
+    y_fit = np.clip(y, TARGET_CLIP, None)
     # scorer A: all columns; scored with pedigree neutralised
     all_cols = list(Xtr.columns)
-    pred_a = fit_avg(Xtr, y, all_cols)
+    pred_a = fit_avg(Xtr, y_fit, all_cols)
     neutral = {c: float(Xtr[c].mode().iloc[0]) for c in REMOVED}
     neut = lambda F: F.assign(**neutral)
     # scorer B: de-biased target, pedigree columns dropped
-    y_deb = y - (Xtr[REMOVED].fillna(0) * coef[REMOVED]).sum(axis=1)
+    y_deb = y_fit - (Xtr[REMOVED].fillna(0) * coef[REMOVED]).sum(axis=1)
     cols_b = [c for c in all_cols if c not in REMOVED]
     pred_b = fit_avg(Xtr, y_deb, cols_b)
 

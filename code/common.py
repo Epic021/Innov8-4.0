@@ -13,6 +13,7 @@ import re
 import sys
 import numpy as np
 import pandas as pd
+from scipy.stats import spearmanr
 
 SEED = 42
 NUM_THREADS = 2
@@ -370,6 +371,9 @@ class FeatureBuilder:
         sk = allf.c_skills.explode().dropna()
         self.top_skills = list(sk.value_counts().head(self.n_skills).index)
         self.roles = sorted(allf.applied_role.dropna().unique())
+        # the assessment is role-specific: normalise within the applied role (means differ by role)
+        grp = allf.groupby("applied_role").c_tech
+        self.role_tech_mean, self.role_tech_std = grp.mean().to_dict(), grp.std().to_dict()
         self.nirf = load_nirf()
         # role fit: the 20 most common skills among the top-quartile performers of each role in train
         y = tr.post_hire_score.map(num)
@@ -396,6 +400,8 @@ class FeatureBuilder:
             for sk, r in zip(d.c_skills, d.applied_role)], index=d.index)
         cols["title_fit"] = pd.Series([float(title_fits_role(r, t)) for r, t in zip(d.applied_role, d.current_title)],
                                       index=d.index)
+        cols["tech_z_role"] = ((d.c_tech - d.applied_role.map(self.role_tech_mean))
+                               / d.applied_role.map(self.role_tech_std)).astype(float)
         # --- pedigree block: the six things the old panel inflated (+ IIT/NIT splits of "big name") ---
         inst = d.c_inst
         iit = inst.str.startswith("iit ")
@@ -431,17 +437,22 @@ class FeatureBuilder:
 # Dev-set harness: dev.csv is an OLD-regime pool with 150 known winners.
 # ----------------------------------------------------------------------------
 def dev_metrics(dv, scores, dw, k=K_DEV, exclude=None):
+    """P@k, NDCG@k, MAP@k against the Ledger's winners, plus rho = Spearman correlation between our
+    score and the winners' official rank (ordering quality among the 150 winners)."""
     win = set(dw.candidate_id)
-    o = pd.DataFrame({"id": dv.candidate_id.values, "s": np.asarray(scores)})
+    full = pd.DataFrame({"id": dv.candidate_id.values, "s": np.asarray(scores)})
     if exclude is not None:
-        o = o[~np.asarray(exclude)]
-    o = o.sort_values("s", ascending=False).head(k)
+        full = full[~np.asarray(exclude)]
+    o = full.sort_values("s", ascending=False).head(k)
     hits = o.id.isin(win).values.astype(float)
     disc = 1.0 / np.log2(np.arange(2, k + 2))
     ndcg = (hits * disc).sum() / disc[: min(k, len(win))].sum()
     prec_at = np.cumsum(hits) / np.arange(1, k + 1)
     ap = (prec_at * hits).sum() / min(k, len(win))
-    return {"P@%d" % k: hits.mean(), "NDCG@%d" % k: ndcg, "MAP@%d" % k: ap}
+    wr = dict(zip(dw.candidate_id, pd.to_numeric(dw["rank"], errors="coerce")))
+    w = full[full.id.isin(win)]
+    rho = spearmanr(w.s.values, [-wr[i] for i in w.id]).correlation if len(w) > 2 else float("nan")
+    return {"P@%d" % k: hits.mean(), "NDCG@%d" % k: ndcg, "MAP@%d" % k: ap, "rho": rho}
 
 
 def fmt(m):
