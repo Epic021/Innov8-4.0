@@ -43,9 +43,10 @@ LGB_PARAMS = dict(objective="regression", learning_rate=0.03, num_leaves=7, min_
                   num_threads=C.NUM_THREADS, deterministic=True, force_row_wise=True, verbose=-1)
 N_ROUNDS = 1500
 SEEDS = (42, 43, 44)
-# Only the top of the distribution matters: scores below the Archive median (49) are clipped to 50 so the
-# models spend no capacity separating bad hires from mediocre ones (Ledger NDCG 0.63 -> 0.65, rho 0.29 -> 0.42).
-TARGET_CLIP = 50.0
+# Only the top of the distribution matters: scores below 60 (about the Archive's 70th percentile) are clipped to 60
+# so the models spend no capacity separating bad hires from mediocre ones (Ledger NDCG 0.63 -> 0.68, rho 0.29 -> 0.43;
+# 5-fold CV on the Archive agrees). Chosen by the Ledger and Archive CV over 40/45/50/55/60.
+TARGET_CLIP = 60.0
 REMOVED = C.PEDIGREE + ["old_boys"]     # every institute/pedigree column is taken out of the models
 
 
@@ -70,12 +71,16 @@ def prepare(data_dir="."):
     Xtr, Xdv, Xte = fb.transform(tr), fb.transform(dv), fb.transform(te)
     log("features: %d columns (%d note sentences, %d skills)" % (Xtr.shape[1], len(fb.sentences), len(fb.top_skills)))
 
-    # the old panel's premium per pedigree flag (points of post_hire_score), from a linear fit on train
-    ridge = Ridge(alpha=1.0).fit(Xtr.fillna(Xtr.median()), y)
-    coef = pd.Series(ridge.coef_, index=Xtr.columns)
-    log("old panel premium (pts): " + ", ".join("%s=%.1f" % (c, coef[c]) for c in REMOVED))
-
+    # the old panel's premium per pedigree flag (points of post_hire_score), from a linear fit on train:
+    # once on the raw score (the finding reported in the documentation) and once on the clipped target the
+    # models are trained on (the scale on which the premiums are subtracted and the old-boys' bonus is added).
+    Xfill = Xtr.fillna(Xtr.median())
+    coef_raw = pd.Series(Ridge(alpha=1.0).fit(Xfill, y).coef_, index=Xtr.columns)
+    log("old panel premium, raw score (pts): " + ", ".join("%s=%.1f" % (c, coef_raw[c]) for c in REMOVED))
     y_fit = np.clip(y, TARGET_CLIP, None)
+    coef = pd.Series(Ridge(alpha=1.0).fit(Xfill, y_fit).coef_, index=Xtr.columns)
+    log("old panel premium, clipped target (pts): " + ", ".join("%s=%.1f" % (c, coef[c]) for c in REMOVED))
+
     # scorer A: all columns; scored with pedigree neutralised
     all_cols = list(Xtr.columns)
     pred_a = fit_avg(Xtr, y_fit, all_cols)
