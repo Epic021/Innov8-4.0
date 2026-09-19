@@ -139,6 +139,17 @@ def parse_ctc_inr(s):
     return v * 1e5 if v < 500 else v
 
 
+def parse_pcc(s):
+    """public_code_contributions: '22', '~3', '10+', '3 PRs', '40 merged PRs', 'not tracked', blank.
+    Blank / not tracked -> unknown (NaN, no bonus); otherwise the number."""
+    if pd.isna(s):
+        return np.nan
+    t = str(s).lower().strip()
+    if t in ("", "-", "na", "n/a", "none") or "not tracked" in t or "unknown" in t:
+        return np.nan
+    return num(t)
+
+
 _PATH_SPLIT = re.compile(r"\s*(?:→|->|>|\|)\s*")
 _PATH_ITEM = re.compile(r"(.*?)\s*[\(\[]\s*(\d+(\.\d+)?)\s*(yrs?|y|mo|months?)\s*[\)\]]\s*$")
 
@@ -284,8 +295,7 @@ def parse(df):
     d["c_inst"] = d.institute.map(canon_inst)
     d["c_city"] = d.current_city.fillna("").str.lower().str.strip()
     if "public_code_contributions" in d.columns:
-        d["c_pcc"] = pd.to_numeric(d.public_code_contributions.fillna("").str.replace("~", "", regex=False)
-                                   .str.strip(), errors="coerce")   # 'not tracked' / blank -> NaN
+        d["c_pcc"] = d.public_code_contributions.map(parse_pcc)
     else:
         d["c_pcc"] = np.nan
     d["c_name_key"] = d.full_name.map(name_key)
