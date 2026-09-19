@@ -12,6 +12,7 @@ keeps the three submissions directly comparable on the dev harness.
 | **A** (Person A) | `code/main.py` | De-biased LightGBM **regression** of the old panel's rating (scorer A neutralised + scorer B de-biased, averaged) | Learn the old rating, strip pedigree, apply the debrief literally. |
 | **B** (Person B) | `tracks/track_b.py` | LightGBM **LambdaMART ranker** + P(top-5%) + P(top-15%) classifiers, fused by percentile rank | We are graded on a ranking — so optimise rank and membership directly, not a point estimate. |
 | **C** (Person C) | `tracks/track_c.py` | **Consensus** of an interpretable signal scorecard and a diversified Ridge + RandomForest + HistGradientBoosting ensemble (no LightGBM) | Don't bet the list on one GBM: fuse auditable signals with a multi-family ensemble. |
+| **D** (ensemble) | `tracks/track_d.py` | **Rank fusion of A + B + C**, plus an A/B/C/D dev comparison and overlap report | Averaging good, different rankers is usually at least as strong as the best single one and steadier at the margins. |
 
 All three then apply the identical debrief layer — code-contribution fast-track,
 new-college stars, the old-boys' leg-up — and the four hard exclusions
@@ -21,6 +22,7 @@ new-college stars, the old-boys' leg-up — and the four hard exclusions
 - `rerank.py` — shared machinery for B and C: `prepare` (load/parse/features/premiums), pedigree neutralisation, `to_score_scale` (puts any quality on the post_hire_score scale so the +points bonuses mean the same thing), and `shortlist` (the debrief bonuses + exclusions, arithmetic identical to `code/main.py`).
 - `track_b.py` — Person B's ranking + membership ensemble → `submission_b.csv`.
 - `track_c.py` — Person C's consensus scorecard → `submission_c.csv`.
+- `track_d.py` — the A+B+C ensemble; also prints a side-by-side dev comparison and top-500 overlap for all four → `submission_d.csv`.
 
 ## Run
 Exactly like Track A — from a folder holding `train.csv`, `dev.csv`, `dev_winners.csv`, `test.csv`:
@@ -28,6 +30,7 @@ Exactly like Track A — from a folder holding `train.csv`, `dev.csv`, `dev_winn
 ```
 python tracks/track_b.py     # writes submission_b.csv
 python tracks/track_c.py     # writes submission_c.csv
+python tracks/track_d.py     # writes submission_d.csv, and prints the A/B/C/D comparison
 ```
 
 Each prints the dev-harness metrics (P@150 / NDCG@150 / MAP@150), the exclusion
@@ -50,3 +53,6 @@ block alone 0.447. A and B are tied; by the pre-agreed rule (>80% overlap -> shi
 submission. Notes: LightGBM caps a query group at 10,000 rows, so B's ranker uses fixed random groups of 1,000;
 `to_score_scale` maps quality onto the clipped target distribution, which makes B/C's quantile-gap bonuses larger
 in points (21.9) than A's (7.9) -- the rank semantics are the same but the two are not point-for-point identical.
+
+Track D (`track_d.py`) is the A+B+C rank-fusion blend and the harness that prints this table; it is exploratory.
+Since A and B are tied and C is weaker, a blend does not beat A on the Ledger, so the shipped submission stays Track A.

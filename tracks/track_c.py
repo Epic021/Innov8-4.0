@@ -97,7 +97,9 @@ def model_score(P, frames):
 
 
 def build_quality(P):
-    """Consensus of the signal scorecard and the diversified model ensemble."""
+    """Consensus of the signal scorecard and the diversified model ensemble; returns
+    (dev_quality, test_quality). The test score is calibrated onto the clipped
+    post_hire_score scale, the dev score is the raw consensus (ranking-invariant)."""
     te, dv, dw = P["te"], P["dv"], P["dw"]
     Xte, Xdv = P["Xte"], P["Xdv"]
 
@@ -111,7 +113,7 @@ def build_quality(P):
     log("dev consensus (C):" + C.fmt(C.dev_metrics(dv, cons_dv, dw)))
 
     cons_te = 0.5 * R.pctrank(sig_te, index=te.index) + 0.5 * model_te
-    return R.to_score_scale(cons_te, P["y_fit"])   # onto the clipped scale, like Track A
+    return cons_dv, R.to_score_scale(cons_te, P["y_fit"])   # test onto the clipped scale, like Track A
 
 
 def main(data_dir=".", out_path="submission_c.csv"):
@@ -121,7 +123,7 @@ def main(data_dir=".", out_path="submission_c.csv"):
     n_flag, n_win = R.exclusion_check(prep["dv"], prep["dw"])
     log("exclusion rules on dev: %d rows flagged, %d of them winners (must be 0)" % (n_flag, n_win))
 
-    quality = build_quality(prep)
+    _, quality = build_quality(prep)
     ids, stats = R.shortlist(prep["te"], prep["Xte"], quality, prep["unseen"], prep["ob_bonus"])
     C.write_submission(ids, out_path, test_ids=prep["te"].candidate_id)
     for k, v in stats.items():
