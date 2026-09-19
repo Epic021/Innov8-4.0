@@ -3,9 +3,10 @@
 Ranked shortlist of the 500 Vault applicants most likely to become Nightingale's top 5% this cycle.
 
 ## Layout
-- `code/main.py` — entry point; regenerates `submission.csv` (about 10 s, seeds fixed, 2 threads)
+- `code/main.py` — entry point (Track A); regenerates `submission.csv` (about 10 s, seeds fixed, 2 threads)
 - `code/common.py` — parsers for the recruiter-typed fields, features, exclusion rules (fakes, duplicates, notice period, inflated titles), dev-set harness
 - `code/sweep.py` — sensitivity sweep over the debrief-rule parameters (helper, not needed to reproduce)
+- `tracks/` — alternative strategies B and C (same rulebook, different quality model); see `tracks/README.md`
 - `code/nirf_2025_engineering_top50.csv` — external data (NIRF 2025 Engineering rankings)
 - `submission.csv` — the shortlist (`rank,candidate_id`, 500 rows)
 - `documentation.md` / `documentation.pdf` — solution documentation (template sections 1–9)
