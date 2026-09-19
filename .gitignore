@@ -1,0 +1,9 @@
+train.csv
+dev.csv
+test.csv
+Corporate_Heist_Problem_Statement.pdf
+*.zip
+__pycache__/
+*.pyc
+documentation.html
+.claude/
