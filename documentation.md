@@ -1,5 +1,6 @@
 # The Corporate Heist - Solution Documentation
 Team name: TEAM_NAME &nbsp;&nbsp;&nbsp; Unstop team ID: TEAM_ID
+
 Members: MEMBER_1, MEMBER_2, MEMBER_3
 
 ## 1. Summary
@@ -25,6 +26,7 @@ All fields are parsed by small documented functions in `code/common.py`; values 
 
 ## 3. What drives a great hire - your findings
 On the 20,000 Archive hires (`post_hire_score`: mean 48.8, top-5% line 81.9):
+
 - Strongest signals: technical assessment (r = +0.21, 26% of model gain), last rating (+0.21), aptitude, current CTC, KPI met, skills count and role fit. Ranking the Ledger by technical assessment alone gives P@150 = 0.17; the full model gives 0.57 (NDCG@150 0.62, MAP@150 0.42).
 - More experience and longer career paths score *lower* (r = -0.13 / -0.12): the old panel's best-rated hires were early-career.
 - The six "pet preferences" carry a clear premium in the old ratings (linear fit, points of post-hire score, everything else controlled): big-metro city +6.5, referral channel +4.4, employer with 5,000+ staff +4.1, gap-free CV (<= 2 idle years since graduation) +4.1, IIT +3.6 on top of +2.4 for any NIRF-2025 top-50 / IIT / NIT / BITS / IIIT institute, "proper" engineering degree +3.2. Ledger winners are 48% IIT vs 31% of the pool and 35% referrals vs 17%.
@@ -34,11 +36,13 @@ On the 20,000 Archive hires (`post_hire_score`: mean 48.8, top-5% line 81.9):
 
 ## 4. The current cycle
 Everything below exists in the Vault and in **neither** train nor dev, so the debrief is a literal description of this cycle:
+
 - `public_code_contributions` (new column): 602 rows with >= 24 ("dozens"), 899 with 12-23, 1,593 with 6-11, 2,420 with 1-5; 4,448 are blank or "not tracked".
 - Notice periods above 60 days: train/dev maximum is 60 days; the Vault has 208 rows at 90-180 days.
 - Inflated titles: the Archive contains no Head/Director/VP with under 10 years and no Lead/Manager with under 3; the Vault has 107 (e.g. "Head of AI, 3.4 years", "VP Engineering after an internship and an apprenticeship").
 - 341 Vault rows come from 92 institutes Nightingale never hired from; 57 of them scored >= 85 on the technical assessment and pass every fake check, and their base quality is already high (median at the 93rd percentile).
 - The excluded groups are traps for a naive model: inflated-title rows sit at the 72nd percentile of our quality score (24% would land in a plain top 5%), long-notice rows at the 59th (12%), duplicates at the 58th (12%); fabricated rows average 92 on the technical assessment.
+
 How the shortlist accounts for it (`code/main.py`, `shortlist()`): the quality score is the neutralised old-panel model (section 6). A contribution bonus ramps linearly from 10 to 24 contributions and at 24+ equals the gap between the 65th percentile and the top-5% line of the quality score (15.5 points: "fast-tracked even if the rest is only good"). New-college candidates with technical assessment >= 85 whose skills or current title fit the applied role receive the gap between the median and the top-5% line (20.0 points). The old-boys' handful receives the +5.0 measured in the Archive. Notice > 60 days and inflated titles are removed outright.
 
 ## 5. Profiles you excluded and why
