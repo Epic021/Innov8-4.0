@@ -91,8 +91,9 @@ def fit_clf(X, label, cols):
 
 
 def build_quality(P):
-    """Train the three components and return (dev_quality, test_quality) plus per-component
-    dev scores for the log. All components are scored with pedigree neutralised."""
+    """Train the three components and return (dev_quality, test_quality); the test score is
+    calibrated onto the clipped post_hire_score scale, the dev score is the raw fused rank
+    (ranking-invariant, used for the dev harness). All components scored with pedigree neutralised."""
     Xtr, Xdv, Xte, y = P["Xtr"], P["Xdv"], P["Xte"], P["y"]
     cols = list(Xtr.columns)                      # all features; pedigree neutralised at scoring
     nmap = R.neutral_map(Xtr)
@@ -118,7 +119,7 @@ def build_quality(P):
     log("dev fused (B):   " + C.fmt(C.dev_metrics(dv, dev_q, dw)) + "   <- lower is expected: dev is old-regime")
 
     test_raw = pd.Series(fuse(Xte), index=P["te"].index)
-    return R.to_score_scale(test_raw, P["y_fit"])   # onto the clipped scale, like Track A
+    return dev_q, R.to_score_scale(test_raw, P["y_fit"])   # test onto the clipped scale, like Track A
 
 
 def main(data_dir=".", out_path="submission_b.csv"):
@@ -128,7 +129,7 @@ def main(data_dir=".", out_path="submission_b.csv"):
     n_flag, n_win = R.exclusion_check(prep["dv"], prep["dw"])
     log("exclusion rules on dev: %d rows flagged, %d of them winners (must be 0)" % (n_flag, n_win))
 
-    quality = build_quality(prep)
+    _, quality = build_quality(prep)
     ids, stats = R.shortlist(prep["te"], prep["Xte"], quality, prep["unseen"], prep["ob_bonus"])
     C.write_submission(ids, out_path, test_ids=prep["te"].candidate_id)
     for k, v in stats.items():
